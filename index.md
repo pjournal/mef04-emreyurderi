@@ -1,7 +1,7 @@
 ## Week 1-2
 ### Assignments
 
-[**RMarkdown Assignment**](https://github.com/pjournal/mef04-emreyurderi/blob/gh-pages/Rmarkdown_Assignment.html)
+[**RMarkdown Assignment**](Rmarkdown_Assignment.html)
 
 ### Exercises
 
