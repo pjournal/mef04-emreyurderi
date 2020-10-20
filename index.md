@@ -5,4 +5,8 @@
 
 ### Exercises
 
-Datacamp - Introduction to R Course completed
+Datacamp - Introduction to R Course &#10004;
+
+Datacamp - Intermediate R Course &#10004;
+
+Datacamp - Reporting with RMarkdown (In Progress)
