@@ -15,6 +15,7 @@ Datacamp - Reporting with RMarkdown (In Progress)
 ### Assignments
 
 [**Bonus Exercise - Istanbul Property Data**](Bonus_Exercise_Late.html)
+[**Electricity Market Prices**](electricity_market.html)
 
 ### Exercises
 Datacamp - Data Manipulation With dplyr &#10004;

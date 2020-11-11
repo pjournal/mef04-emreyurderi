@@ -1,0 +1,206 @@
+---
+title: "Electricity Market Prices Assignment"
+author: "Emre Kemal Yurderi"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r, include=FALSE}
+library(readxl)
+library(dplyr)
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+```
+```{r, include=FALSE}
+data <- read.csv(file = "/Users/Emre - PC/Desktop/MEF Assignments/R Exercises/W5_Electricity_Market_Prices/ptf-smf.csv")
+str(data)
+glimpse(data)
+```
+```{r include=FALSE}
+df <- data
+```
+
+&nbsp;
+&nbsp;
+&nbsp;
+
+```{r}
+glimpse(df)
+summary(df)
+```
+The data (named as df) have taken from the Market & Financial Settlement Center's general report database and includes the energy market's balance figures for the September of 2020. As a glimpse of the data, it consists of 6 columns and 720 rows. It gives the information about the Market Clearance Price, System Marginal Price, Imbalance Prices and Energy Status(Deficit/Surplus)
+
+&nbsp;
+
+```{r include=FALSE}
+df<-
+  df %>%
+  rename(
+    "Pozitif Dengesizlik Fiyatı"="Pozitif.Dengesizlik.Fiyatı..TL.MWh.",
+    "Negatif Dengesizlik Fiyatı"="Negatif.Dengesizlik.Fiyatı..TL.MWh."
+    )
+```
+
+
+```{r include=FALSE}
+#Convert SMF.Yön column values
+for ( i in 1:length(df$Tarih)){
+  if (df$SMF.Yön[[i]] == "? Enerji Açığı"){
+    df$SMF.Yön[[i]] <- "Deficit"
+  }else if ((df$SMF.Yön[[i]] == "?Enerji Fazlası")){
+    df$SMF.Yön[[i]] <- "Surplus"
+  }else {
+    df$SMF.Yön[[i]] <- "Balanced"
+  }
+}
+```
+
+
+
+```{r include=FALSE}
+#Convert Tarih into Date from character
+df$Tarih <- dmy_hm(df$Tarih)
+```
+
+
+```{r include=FALSE}
+#Create day, month, hour columns
+df$Day <- day(df$Tarih)
+df$Month <- month(df$Tarih)
+df$Hour <- hour(df$Tarih)
+df$Day_name <- wday(df$Tarih, label = TRUE, abbr = FALSE)
+df$id <- 1:length(df$Tarih)
+```
+
+```{r include=FALSE}
+tail(df)
+```
+
+
+```{r include=FALSE}
+colnames(df)
+```
+```{r include=FALSE}
+#reorder columns
+df <- df[, c("id","Tarih", "Month", "Day", "Hour", "Day_name", "PTF", "SMF", "Pozitif Dengesizlik Fiyatı", "Negatif Dengesizlik Fiyatı", "SMF.Yön")]
+```
+
+```{r}
+ggplot(df, aes(x = Hour, y = Day, color = SMF.Yön)) +
+  geom_point(position = "jitter") +
+  scale_color_manual(values=c("blue", "red", "green")) +
+  labs(title = "Energy Management Distribution in Days and Hours in September")
+```
+
+As we can see from the scatter plot, most of the days and hours, there are energy deficits in September. However there are some green spots that lie in a line such as the day of around 5th and 19th which were Saturdays. And the occurrence of green spots seems more before 8 o'clock in a day.
+
+&nbsp;
+
+```{r, include=FALSE}
+# Total counts of energy management by days
+day_yon <-
+  df %>%
+  group_by(Day_name) %>%
+  count(SMF.Yön)
+```
+
+```{r include=FALSE}
+day_yon
+```
+
+```{r include=FALSE}
+mycolors <- c("blue", "red", "green")
+```
+
+
+```{r}
+ggplot(day_yon, aes(x = Day_name, y=n, fill = factor(SMF.Yön, levels = c("Balanced", "Surplus", "Deficit")))) +
+  geom_col(position = "stack") +
+  labs(title="Energy Management Frequencies by Days",
+       x="Days of the Week",
+       y= "Count of the Energy Management")+
+  scale_fill_discrete(name="Energy Management")
+```
+
+If we apply further investigation based on the days of the week, we can see that, especially on week days there are mostly energy deficits. On the other hand, energy surplus occurs mostly in Saturdays.
+
+&nbsp;
+
+```{r include=FALSE}
+hour_yon <-
+  df %>%
+  group_by(Hour) %>%
+  count(SMF.Yön)
+```
+```{r}
+ggplot(hour_yon, aes(x = Hour, y=n, fill = factor(SMF.Yön, levels = c("Balanced", "Surplus", "Deficit")))) +
+  geom_col(position = "stack") +
+  labs(title="Energy Management Frequencies by Hours",
+       x="Hours",
+       y= "Count of the Energy Management")+
+  scale_fill_discrete(name="Energy Management")
+```
+
+Additionally, energy management chart by hours depicts, most of the energy surplus occurs between 0 am. and 8 am. which supports the thesis that mentioned above.
+
+&nbsp;
+
+```{r include=FALSE}
+#character'ı float çevirme denemeleri
+str(df)
+deneme <- df
+a <- deneme[3, "PTF"]
+deneme$PTF <- gsub(x = deneme[, "PTF"], pattern = ",", replacement = ".")
+a
+
+deneme$PTF<-as.double(deneme$PTF, digits = 5)
+deneme[3,"PTF"] /3
+#df["PTF SMF Ratio"] <- as.float(df["PTF"]) / as.float(df["SMF"])
+```
+```{r include=FALSE}
+df$PTF <- gsub(x = df[, "PTF"], pattern = ",", replacement = ".")
+df$SMF <- gsub(x = df[, "SMF"], pattern = ",", replacement = ".")
+str(df)
+
+df$PTF <- as.double(df$PTF, digits = 5)
+df$SMF <- as.double(df$SMF, digits = 6)
+```
+```{r include=FALSE}
+#65th row of the SMF column was 2.000.00 after we convert "," to ".". I put so much effort to convert it by codes however couldn't manage how to do, so I have changed it manually to 2000.00 for the sake of as.double() function. Unless it returns NA for that row.
+df$SMF[65] <- 2000.00
+a
+sum(is.na(df$SMF))
+```
+
+```{r}
+ggplot(df) +
+  geom_point(aes(x = id,y = PTF), colour = "red") +
+  geom_point(aes(x=id, y=SMF), colour="blue") +
+  labs(title = "PTF & SMF comparison",
+       x = "ID",
+       y= "PTF & SMF")
+```
+
+As we can see from the chart, SMF values are at above of the PTF values due to energy deficits. In addition, there are some outliers in SMF, such as; 2000 between the id number of 50 and 100, and also 1000, around the id number of 400. A further investigation may be needed for these outliers' reasons.
+
+&nbsp;
+
+```{r }
+deneme <- df
+deneme$PTF_SMF_Ratio <- deneme$PTF / deneme$SMF
+a_sd <- sd(deneme$PTF_SMF_Ratio)
+a_mean <-mean(deneme$PTF_SMF_Ratio)
+ggplot(deneme, aes(x = id, y = PTF_SMF_Ratio))+
+  geom_line(size= 1.2)+
+  geom_segment(aes(x = 0, y = a_mean + 3*a_sd, xend = 720, yend = a_mean + 3*a_sd), color ="red")+
+  geom_segment(aes(x = 0, y = a_mean - 3*a_sd, xend = 720, yend = a_mean - 3*a_sd), color ="red")
+```
+
+The red lines are represents the 3 standard deviation distance from the mean of the PTF/SMF Ratio. The outliers can be seen more clear by the help of their ratios and there are at least 4 outliers. Besides the outliers, the chart gives the information by the number of upward spikes as, energy deficits occurs more than the energy surpluses.
+
+&nbsp;
+
+### Conclusion
+To wrap up, we can conclude that, there are mostly lack of energy according to the one month energy market's figures. There is a huge potential for the energy trading companies such as; AYESAŞ and Boğaziçi Elektrik, to decrease their costs by predicting more accurately the energy consumption in a day.
