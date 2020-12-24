@@ -24,3 +24,8 @@ Datacamp - Data Manipulation With dplyr &#10004;
 Datacamp - Introduction to Data Visualization With ggplot2 &#10004;
 
 Datacamp - Joining Data With dplyr (In Progress)
+
+## Week 11-12
+### Assignments
+
+[**Diamonds Price Estimation**](Diamond.html)
