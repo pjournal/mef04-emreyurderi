@@ -28,4 +28,4 @@ Datacamp - Joining Data With dplyr (In Progress)
 ## Week 11-12
 ### Assignments
 
-[**Diamonds Price Estimation**](Diamond.html)
+[**Diamonds Price Estimation**](Diamond_markdown.html)

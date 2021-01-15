@@ -1,0 +1,206 @@
+---
+title: "Diamonds Assignment"
+author: "Emre Kemal Yurderi"
+date: "25 12 2020"
+output: 
+  html_document:
+    code_folding: hide
+    toc: true
+    toc_float: 
+      collapsed: true
+      smooth_scroll: true
+    toc_depth: 5
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r include=FALSE}
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(scales)
+library(rpart)
+```
+
+```{r}
+set.seed(503)
+diamonds_test <- diamonds %>% mutate(diamond_id = row_number()) %>%
+  group_by(cut, color, clarity) %>% sample_frac(0.2) %>% ungroup()
+diamonds_train <- anti_join(diamonds %>% mutate(diamond_id = row_number()),
+                            diamonds_test, by = "diamond_id")
+
+
+data<-diamonds_train
+testdata <- diamonds_test
+```
+
+### Data Preprocessing
+
+```{r}
+data %>%
+  summary()
+```
+The x, y and z represent the shape of the diamond. According to the summary above, there are some outliers since the y's and z's max values are quite high and all of the x, y, z have the min values as zero which is not possible. Therefore we can eliminate them
+
+
+```{r}
+data <- subset(data, x != 0 & y!= 0& z!=0)
+data <- subset(data, y<15)
+data <- subset(data, z<15)
+
+sum(is.na(data))
+```
+
+There is no missing value in data
+
+### The Summary of variables
+
+
+```{r}
+unique(data$cut)
+```
+
+
+The classification of cut is, as in order; Fair(Worst), Good, Very Good, Premium, Ideal(Best). 
+
+
+```{r}
+unique(data$color)
+```
+
+
+Diamond colors have a grading system. According to that system, D is very rare and the most valuable one. E and F are more affordable and still accepted as colorless, which is very good quality. But they have high demand. G-H-I-J are graded as Near Colorless. They have some little spots that can be seen with naked eye. They are not as valuable as D, E or F
+
+
+
+```{r}
+unique(data$clarity)
+```
+
+Clarity also have a universal scale from VSS(Better) to I (Worse)
+
+```{r}
+summary(data$carat)
+```
+The carat actually means the weight of the gemstone. Generally 0.2 gram is 1 carat for diamonds. However, it depends of the density of the gemstone, therefore 1 carat of a diamond doesn't mean the same as 1 carat any other gemstone by its volume or size.
+
+On the other hand, the depth and table percentages actually are depended on the shape of diamond. There are no one ideal measure, but for further information the website at the reference section can be visited.
+
+
+### Exploratory Data Analysis
+
+Under these circumstances, we can investigate the data graphically, if the conditions of what makes a diamond more precious, really effects the price or not
+
+```{r}
+ggplot(data, aes(x=carat, y=price)) +
+  geom_point()
+
+```
+
+The graph shows us above, there is a linear dependency between carat and price as expected.
+
+```{r}
+color_mean_price <- data %>%
+  group_by(color)%>%
+  summarize(mean_price=mean(price), n())
+
+ggplot(color_mean_price, aes(x=color, y=mean_price)) +
+  geom_col()
+```
+
+Just opposite of the description above, the D color supposed to be the most valuable diamond. However, it has the lowest average price. On the other hand, the J color which is the least quality one, has the highest mean price
+
+
+```{r}
+cut_mean_price <- data %>%
+  group_by(cut)%>%
+  summarize(mean_price=mean(price), n())
+
+ggplot(cut_mean_price, aes(x=cut, y=mean_price )) +
+  geom_col()
+```
+
+According to the graph above, there is no significant difference can be seen between price and cut. The "ideal" cut has the lowest mean price, but the "fair" cut has the second highest mean price
+
+```{r}
+clarity_mean_price <- data %>%
+  group_by(clarity)%>%
+  summarize(mean_price =mean(price), n())
+  
+ggplot(clarity_mean_price, aes(x=clarity, y=mean_price )) +
+  geom_col()
+```
+
+Quite similar to the color and cutting of a diamond, clarity also don't make a significant difference on price as well.
+
+
+In the next step, we can check the relationship between variables. Instead of checking the x, y and z separately, I will find the volume of the diamond and examine if the size matters for a diamond by correlation matrix.
+
+```{r}
+data <- data %>%
+  mutate(volume=x*y*z)
+```
+
+```{r}
+corr_data <- data[,c(1,5,6,7,8,9,10,12)]
+round(cor(corr_data), 2)
+```
+
+The correlation table shows that, there are very strong positive relationships between price and carat, x, y, z and volume. But, as explained above, carat actually means the weight of the diamond and it depends on its shape as well. This can be a sign of the multicollinearity and including it to the model could give unrealistic results. So, I will only consider the carat and price for the regression model.
+
+
+### Prediction
+
+
+
+```{r}
+linearmod <- lm(price ~ carat, data = data)
+print(linearmod)
+
+summary(linearmod)
+
+
+```
+
+There are significant evidences that both intercept and carat are different than the zero by their t-tests. Additionally, R-squared result indicates that, the model explains 85% of the variability around its mean.
+
+
+```{r}
+
+#https://www.dataquest.io/blog/statistical-learning-for-predictive-modeling-r/
+ggplot(data=data, aes(linearmod$residuals)) +
+geom_histogram(binwidth = 1, color = "black", fill = "purple4") +
+theme(panel.background = element_rect(fill = "white"),
+axis.line.x=element_line(),
+axis.line.y=element_line()) +
+ggtitle("Histogram for Model Residuals")
+```
+
+The most of the residuals are spread around zero, which can be concluded as, the model fits to the data quite well.
+
+```{r}
+pred <-predict(linearmod, data.frame(carat=testdata$carat))
+plot(pred-testdata$price)
+
+```
+
+If we test our prediction model with the test data, the graph above shows that, predicted values are quite close to the actual prices on our test data.
+
+### Conclusion
+
+The basic analyzing exhibits, most of the times people don't know the real value of the diamond that they bought. Generally the only variable that they consider, what is the carat of the diamond. Since the carat is basically the weight of the diamond, the regression is applied without the variables that represents the shape of a diamond, but only carat is taken into account. According to the residuals between predicted values and actual values, the regression model fits quite well and explains the 85% of the variability.
+
+### Reference
+[Linear regression](http://r-statistics.co/Linear-Regression.html)
+
+[Diamonds Coloring Scale](https://www.jewelry-secrets.com/Blog/diamond-color-e-f-colorless-diamonds/)
+
+[Diamonds Clarity Scale](https://www.americangemsociety.org/page/clarityscale#:~:text=Internally%20Flawless%20diamonds%20have%20no,confined%20to%20the%20surface%20only).&text=A%20diamond%20with%20a%20clarity,to%20see%20under%2010x%20magnification.)
+
+[Diamonds Depth and Table](https://www.diamonds.pro/education/diamond-depth-and-table/)
+
+[Linear Regression Predictive Modelling](https://www.dataquest.io/blog/statistical-learning-for-predictive-modeling-r/)
+
